@@ -2,8 +2,7 @@
 #include <string>
 
 #include "config.h"
-#include "chip/loader.h"
-#include "chip/graph.h"
+#include "graph.h"
 
 int main(int argc, char **argv) {
 
@@ -12,7 +11,6 @@ int main(int argc, char **argv) {
     auto fname = kVariablesMap["filename"].as<std::string>();
 
     Graph graph;
-    Loader::Get().FromFile(fname, graph);
 
     return 0;
 };

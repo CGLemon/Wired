@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-#include "utils/format.h"
+#include "format.h"
 #include "config.h"
 
 namespace po = boost::program_options;
