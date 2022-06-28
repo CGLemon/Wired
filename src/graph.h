@@ -9,28 +9,30 @@
 
 class NetList;
 
-class Node {
-public:
+struct Node {
     Node() = default;
 
     size_t identity;
 
     float x, y, width, height;
 
+    bool Intersection(Node *a);
+
+    // One node may connect with multiple netlists.
     std::vector<NetList*> net_lists;
 };
 
-
-class NetList {
-public:
+struct NetList {
     NetList() = default;
 
-    float ComputeHPWL();
+    float ComputeHpwl();
 
     size_t identity;
 
+    // HPWL value
     float hpwl;
 
+    // All nodes contained in netlist.
     std::vector<Node*> nodes;
 };
 
@@ -38,18 +40,26 @@ class Graph {
 public:
     Graph() = default;
 
-    void AllocateNodes(size_t n);
+    void AllocateNodeBuffer(size_t n);
 
-    void BuildNetList(std::initializer_list<size_t> list);
+    void SetNode(size_t id, float x, float y, float width, float height);
 
-    float ComputeHPWL(bool recompute);
+    void BuildNetList(size_t id, std::initializer_list<size_t> list);
+
+    float ComputeHpwl(bool recompute);
 
     float GetHPWL() const;
 
-private:
-    float hpwl_;
+    // Move a node and recompute HPWL.
+    void MoveNode(int id, float x, float y);
 
-    std::vector<std::unique_ptr<Node>> nodes_;
+    // Swap two nodes and recompute HPWL.
+    void SwapTwoNodes(int id1, int id2);
+
+private:
+    float all_hpwl_;
+
+    std::vector<std::unique_ptr<Node>> node_buffer_;
 
     std::vector<std::unique_ptr<NetList>> net_lists_;
 };
