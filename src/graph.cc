@@ -3,15 +3,7 @@
 
 #include "graph.h"
 
-bool Node::Intersection(Node *a) {
-    float half_w = width/2.f, half_h = height/2.f;
-
-    float vertex0[2] = {x + half_w, y + half_h};
-    float vertex1[2] = {x + half_w, y - half_h};
-    float vertex2[2] = {x - half_w, y - half_h};
-    float vertex3[2] = {x - half_w, y + half_h};
-
-
+bool Node::Intersections(Node *a) {
 /*
  *
  *    3-----------0
@@ -24,7 +16,33 @@ bool Node::Intersection(Node *a) {
  *
  */
 
+    // Compute node area.
+    float half_w = width/2.f, half_h = height/2.f;
+    float vertex0[4][2] = {
+        {x + half_w, y + half_h},
+        {x + half_w, y - half_h},
+        {x - half_w, y - half_h},
+        {x - half_w, y + half_h}
+    };
 
+
+    // Compute intersection area.
+    half_w = a->width/2.f;
+    half_h = a->height/2.f;
+    float x_upper = a->x + half_w;
+    float x_lower = a->x - half_w;
+    float y_upper = a->y + half_h;
+    float y_lower = a->y - half_h;
+
+    for (int i = 0; i < 4; ++i) {
+        auto vx = vertex0[i][0];
+        auto vy = vertex0[i][1];
+
+        if (vx < x_upper && vx > x_lower &&
+                vy < y_upper && vy > y_lower) {
+            return true;
+        }
+    }
 
     return false;
 }
@@ -58,20 +76,25 @@ float NetList::ComputeHpwl() {
     return hpwl;
 }
 
-void Graph::AllocateNodeBuffer(size_t n) {
+void Graph::AllocateNodeBuffer(int n) {
     // Allocate enough nodes.
     node_buffer_.resize(n);
     node_buffer_.shrink_to_fit();
 
     // Clear all status.
-    for (auto i = size_t{0}; i < n; ++i) {
+    for (auto i = int{0}; i < n; ++i) {
         node_buffer_[i]->identity = i;
         node_buffer_[i]->net_lists.clear();
     }
     all_hpwl_ = 0;
+    net_lists_.clear();
 }
 
-void Graph::SetNode(size_t id, float x, float y, float width, float height) {
+void Graph::SetWH(int w, int h) {
+    width_ = w; height_ = h;
+}
+
+void Graph::SetNode(int id, float x, float y, float width, float height) {
     Node *node_ptr = node_buffer_[id].get();
 
     node_ptr->x = x;
@@ -81,7 +104,7 @@ void Graph::SetNode(size_t id, float x, float y, float width, float height) {
     node_ptr->net_lists.clear();
 }
 
-void Graph::BuildNetList(size_t id, std::initializer_list<size_t> list) {
+void Graph::InsertNetList(int id, std::initializer_list<int> list) {
     net_lists_.emplace_back(std::make_unique<NetList>());
 
     NetList *list_ptr = net_lists_.back().get();
@@ -90,7 +113,27 @@ void Graph::BuildNetList(size_t id, std::initializer_list<size_t> list) {
     list_ptr->hpwl = 0.f;
     list_ptr->identity = id;
 
-    for (const size_t val : list) {
+    for (const int val : list) {
+        Node *node_ptr = node_buffer_[val].get();
+
+        // link netlist to node
+        list_ptr->nodes.emplace_back(node_ptr);
+
+        // link node to netlist
+        node_ptr->net_lists.emplace_back(list_ptr);
+    }
+}
+
+void Graph::InsertNetList(int id, std::vector<int> &list) {
+    net_lists_.emplace_back(std::make_unique<NetList>());
+
+    NetList *list_ptr = net_lists_.back().get();
+
+    // init it
+    list_ptr->hpwl = 0.f;
+    list_ptr->identity = id;
+
+    for (const int val : list) {
         Node *node_ptr = node_buffer_[val].get();
 
         // link netlist to node
@@ -111,10 +154,6 @@ float Graph::ComputeHpwl(bool recompute = false) {
             all_hpwl_ += it->hpwl;
         }
     }
-    return all_hpwl_;
-}
-
-float Graph::GetHPWL() const {
     return all_hpwl_;
 }
 
